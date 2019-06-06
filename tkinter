@@ -4,13 +4,15 @@ import pandas as pd
 
 root= tk.Tk()
 
+# Defines what the dialog box looks like.
 canvas1 = tk.Canvas(root, width = 300, height = 300, bg = 'lightsteelblue')
 canvas1.pack()
 
+# Establishes filepath
 def getExcel ():
     global df
     
-    import_file_path = filedialog.askopenfilename()
+    import_file_path = filedialog.askopenfilename(initialdir = "T:/Operations/Middle Office/Data/WSO Reports",title = "Select file",filetypes = (("excel files","*.xlsx"),("all files","*.*")))
     df = pd.read_excel (import_file_path)
     print (df)
     
