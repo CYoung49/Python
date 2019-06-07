@@ -1,0 +1,7 @@
+import pandas as pd
+
+#    Defines a specific file and pulls the two required sheets into dataframes, merges the sheets, and returns a joined sheet.
+df1 = pd.ExcelFile ("T:/Operations/Middle Office/Data/WSO Reports/Security Benefit - LoanRefDataContractsAmorts - 6.06.2019.xlsx")
+df2 = pd.read_excel (df1, sheet_name="LoanRefData")
+df3 = pd.read_excel (df1, sheet_name="Contracts")
+df = pd.merge(df2,df3,on="LoanXID",how='outer')
