@@ -2,21 +2,61 @@ import tkinter as tk
 from tkinter import filedialog
 import pandas as pd
 
-root= tk.Tk()
+# Creates Tk root widget, which initializes Tkinter. This is a window with a title bar and other decoration provided by 
+# the window manager.
+root = tk.Tk()
 
 # Defines what the dialog box looks like.
 canvas1 = tk.Canvas(root, width = 300, height = 300, bg = 'lightsteelblue')
 canvas1.pack()
 
-# Establishes filepath
+# Creates function and global "df" variable.
 def getExcel ():
     global df
-    
-    import_file_path = filedialog.askopenfilename(initialdir = "T:/Operations/Middle Office/Data/WSO Reports",title = "Select file",filetypes = (("excel files","*.xlsx"),("all files","*.*")))
-    df = pd.read_excel (import_file_path)
-    print (df)
-    
+
+    # Defines file path for shortcut to finding WSO files. User selects specific file.  
+    import_file_path = filedialog.askopenfilename(initialdir = "T:/Operations/Middle Office/ Data/WSO Reports", title = "Select File", filetypes = (("excel files", "*.xlsx"),("all files","*.*")))
+# Names "xls" as the workbook and two specific sheets within the workbook as "df1" and "df2".
+    xls = pd.ExcelFile (import_file_path)
+    df = pd.read_excel(xls, sheet_name="Contracts")
+# Assigns a variable name to the columns that need removed.    
+    to_drop = ['Contract WSODataContractID',
+'Contract ContractName',
+'Contract GlobalAmount',
+'Contract AllInRate',
+'Contract BaseRate',
+'Contract Spread',
+'Contract StartDate',
+'Contract NextPaymentDate',
+'Contract MaturityDate',
+'Contract InterestDue',
+'Contract InterestReceived',
+'Contract Notes',
+'Contract CurrencyType',
+'Contract ExchangeRate',
+'Contract Frequency',
+'Contract AccrualBasis',
+'Contract MonthCount',
+'Contract YearCount']
+# Removes the list of unwanted columns    
+    df.drop(to_drop, inplace=True, axis=1)
+# Concatenates two columns to create a primary key column that is capable of manipulating records more accurately    
+    df["Key"] = df["LoanXID"].map(str) + df["Contract ContractType"]
+# Creates a column named "Count" that counts how many instances of each primary key appear
+    df2 = df.groupby(['Key']).size().reset_index(name='Count')
+# Merges df and df2 so that df has the Count column    
+    df = (pd.merge(df,df2,on="Key",how='inner'))
+# Removes duplicate primary keys but retains the first record of each duplicate    
+    df.drop_duplicates(subset = "Key", keep = 'first', inplace = True)
+# Removes the "Key" column
+    df.drop('Key', inplace=True, axis=1)
+
+# Executes the button command    
 browseButton_Excel = tk.Button(root, text='Import Excel File', command=getExcel, bg='green', fg='white', font=('helvetica', 12, 'bold'))
 canvas1.create_window(150, 150, window=browseButton_Excel)
-
+    
+# The mainloop is created. The window won't appear until we enter the Tkinter event loop.    
 root.mainloop()
+
+# Saves the newly created "df" as a new excel file in a new location.
+df.to_excel(r"T:\Operations\Middle Office\Markit-EDM\Bank Loans\Python\WSO Count.xlsx")
