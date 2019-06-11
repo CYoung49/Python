@@ -1,6 +1,13 @@
 import tkinter as tk
 from tkinter import filedialog
 import pandas as pd
+import os
+import datetime
+
+# Sets a variable with the current Date/Time
+now = datetime.datetime.now()
+# Formats a new date variable in the xx/xx/xxxx format
+currentDate = str(now.month)+"."+str(now.day)+"."+str(now.year)+".xlsx"
 
 # Creates Tk root widget, which initializes Tkinter. This is a window with a title bar and other decoration provided by 
 # the window manager.
@@ -19,6 +26,8 @@ def getExcel ():
 # Names "xls" as the workbook and two specific sheets within the workbook as "df1" and "df2".
     xls = pd.ExcelFile (import_file_path)
     df = pd.read_excel(xls, sheet_name="Contracts")
+# Sort by LoanXID and contract size in ascending order.
+    df.sort_values(by=['LoanXID','Contract GlobalAmount'])
 # Assigns a variable name to the columns that need removed.    
     to_drop = ['Contract WSODataContractID',
 'Contract ContractName',
@@ -46,8 +55,8 @@ def getExcel ():
     df2 = df.groupby(['Key']).size().reset_index(name='Count')
 # Merges df and df2 so that df has the Count column    
     df = (pd.merge(df,df2,on="Key",how='inner'))
-# Removes duplicate primary keys but retains the first record of each duplicate    
-    df.drop_duplicates(subset = "Key", keep = 'first', inplace = True)
+# Removes duplicate primary keys but retains the last record of each duplicate    
+    df.drop_duplicates(subset = "Key", keep = 'last', inplace = True)
 # Removes the "Key" column
     df.drop('Key', inplace=True, axis=1)
 
@@ -59,4 +68,4 @@ canvas1.create_window(150, 150, window=browseButton_Excel)
 root.mainloop()
 
 # Saves the newly created "df" as a new excel file in a new location.
-df.to_excel(r"T:\Operations\Middle Office\Markit-EDM\Bank Loans\Python\WSO Count.xlsx")
+df.to_excel(r"T:\Operations\Middle Office\Markit-EDM\Bank Loans\Python\WSO Count " + currentDate)
