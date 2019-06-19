@@ -1,0 +1,19 @@
+# Creating charts with KC housing data
+
+pip install plotly
+# Installing Plotly is a pre-req to installing Cufflinks
+pip install cufflinks
+
+# Importing required packages
+import pandas as pd
+import cufflinks as cf
+
+df = pd.read_csv('C:/Users/youngc/Desktop/General Info/train.csv')
+
+# Imports plotly and cufflinks in 'offline' mode, meaning results will display in a cell instead of a browser window
+import plotly.offline
+cf.go_offline()
+cf.set_config_file(offline=False, world_readable=True)
+
+# Defines the type of chart
+df.iplot(kind='histogram')
