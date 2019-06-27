@@ -1,0 +1,44 @@
+import pandas as pd
+import numpy as np
+import requests
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pyodbc
+import os
+
+username = 'username'
+password = 'password'
+driver = '{SQL Server}'
+table = '[CADIS].[VW_Override_Security_Comments]'
+prod = {'Server':'a1sbpdedmrds01.cy5krscokxcs.us-east-1.rds.amazonaws.com',
+       'Database':'EDM_PROD'}
+uat = {'Server':'a1sbutedmrds04.cy5krscokxcs.us-east-1.rds.amazonaws.com',
+      'Database':'EDM_UAT'}
+
+
+def get_query(query,environment=prod):
+    global sql_df
+    """
+    """
+    database = prod['Database']
+    environment = prod['Server']
+
+    
+    connection = pyodbc.connect('DRIVER='+driver+';SERVER='+environment+';PORT=1433;DATABASE='+database+
+                                ';UID='+username+';PWD='+password)
+    print('DRIVER='+driver+';SERVER='+environment+';PORT=1443;DATABASE='+database+
+                                ';UID='+username+';PWD='+password)
+    csr = connection.cursor()
+    sql = query
+    # Read query into pandas DataFrame
+    sql_df = pd.read_sql(sql, connection)
+    # Write query results to csv file
+    filename = input("What do you want to save your file as? Only use numbers, letters, and underscores. ")
+    sql_df.to_csv('C:\\Users\\youngc\\Desktop\\'+filename+'.csv')
+    connection.close()
+    print('Created variable sql_df, a DataFrame that holds the result of '+ query +' .')
+    return sql_df.head()
+
+SQL1 = "select distinct EDM_SEC_ID, LX_ID,EDM_SEC_ID,FACILITY_TYPE,UDF1,UDF2, UDF3,PRINCIPAL_CCY,INCOME_CCY,COUPON_FREQUENCY, COUPON_MONTH,COUPON_TYPE,COUPON_RATE,DAY_COUNT, NOMINAL_PAYMENT_DAY,MATURITY_DATE,RESET_INDEX, FLOATER_SPREAD_BP,VAR_RATE_RESET_FREQ_CODE, VAR_RATE_RESET_MONTH,VAR_DETER_ADJ_DAYS, VAR_RATE_RESET_DAY_CODE,FLOATER_PAY_DAY from [CADIS].[VW_Override_Security_Comments] where FACILITY_TYPE like '%6%2019%WSO%' or UDF1 like '%6%2019%WSO%' or UDF2 like '%6%2019%WSO%' or UDF3	like '%6%2019%WSO%' or PRINCIPAL_CCY like '%6%2019%WSO%' or INCOME_CCY like '%6%2019%WSO%' or COUPON_FREQUENCY like '%6%2019%WSO%' or COUPON_MONTH like '%6%2019%WSO%' or COUPON_TYPE like '%6%2019%WSO%' or COUPON_RATE like '%6%2019%WSO%' or DAY_COUNT like '%6%2019%WSO%' or NOMINAL_PAYMENT_DAY like '%6%2019%WSO%' or MATURITY_DATE like '%6%2019%WSO%' or RESET_INDEX like '%6%2019%WSO%' or FLOATER_SPREAD_BP like '%6%2019%WSO%' or VAR_RATE_RESET_FREQ_CODE like '%6%2019%WSO%' or VAR_RATE_RESET_MONTH like '%6%2019%WSO%' or VAR_DETER_ADJ_DAYS like '%6%2019%WSO%' or VAR_RATE_RESET_DAY_CODE like '%6%2019%WSO%' or FLOATER_PAY_DAY like '%6%2019%WSO%'"
+
+WSO = get_query(SQL1)
