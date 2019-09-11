@@ -54,10 +54,11 @@ def getExcel ():
                'Underlying Settle Price','Order Number',
                'Operator ID','Trade Date','Action','ProdCodeMonYr',
                'Commission/Fees','Trade Value',
-               'New or Asof','Trade Category']
+               'New or Asof','Trade Category','Maturity Date']
     
     df.drop(to_drop, inplace=True, axis=1)
-
+    
+    
 browseButton_XLS = tk.Button(text="      Import Excel File     ", command=getExcel, bg='green', fg='white', font=('helvetica', 12, 'bold'))
 canvas1.create_window(150, 150, window=browseButton_XLS)
 
@@ -72,20 +73,37 @@ df = (pd.merge(df,df2,on="Account"))
 # Import Consolidated Trades
 df3 = pd.read_excel (contrades)
 
-# Append today's trades to Consolidated Trades
-frames = [df,df3]
-df4 = pd.concat(frames)
+# Define Month and Year columns derived from the Month-Yr column
+df["Month"] = df["Month-Yr"].map(lambda x: str(x)[:3])
+df["Year"] = df["Month-Yr"].map(lambda x: str(x)[-2:])
+
+# Merged Months table with df to convert months to futures codes
+xls2 = pd.ExcelFile (r"C:\Users\youngc\Desktop\Day Trades\Months.xlsx")
+dfMonth = pd.read_excel(xls2)
+df = (pd.merge(df,dfMonth,on="Month",how='inner'))
+
+# Concatenated columns to create the futures contract ticker
+df["Contract"] = df["Ticker"].map(str) + df["Month Code"].map(str) + df["Year"]
+
+# Drops unneeded columns from month conversion
+to_drop2 = ['Month','Year','Month Code','Product Code','ProdCode']
+df.drop(to_drop2, inplace=True, axis=1)
 
 # Saves the newly created "df" as a new excel file in a new location.
 df.to_excel(filepath + filename + currentDate)
 
+# Append today's trades to Consolidated Trades
+frames = [df,df3]
+df4 = pd.concat(frames)
+
 # Saves updated Consolidated Trades file
 df4.to_excel(contrades)
 
+# Sets up email
 import win32com.client as win32
 outlook = win32.Dispatch('outlook.application')
 mail = outlook.CreateItem(0)
-mail.To = 'christopher.young@ldc.com'
+mail.To = "christopher.young@ldc.com; jonathan.parker@ldc.com"
 mail.Subject = todayDate + ' Daily Trades'
 mail.Body = 'Please see attached file.'
 
@@ -94,3 +112,4 @@ attachment  = (r"C:\Users\youngc\Desktop\Day Trades\Consolidated Trades.xlsx")
 mail.Attachments.Add(attachment)
 
 mail.Send()
+
