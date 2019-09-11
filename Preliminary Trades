@@ -13,6 +13,7 @@ filename = ("TEMP FILE ")
 filepath = (r"C:/Users/youngc/Desktop/Day Trades/TEMP/")
 termfile = (r"C:\Users\youngc\Desktop\Day Trades\Term Accounts.xlsx")
 contrades = (r"C:\Users\youngc\Desktop\Day Trades\Consolidated Trades.xlsx")
+conbackuppath = (r"C:/Users/youngc/Desktop/Day Trades/Consolidated Trades Backup/")
 
 # Search for all CSV files in 'filepath' and convert them to XLSX files
 for csvfile in glob.glob(os.path.join(filepath, '*.csv')):
@@ -73,6 +74,9 @@ df = (pd.merge(df,df2,on="Account"))
 # Import Consolidated Trades
 df3 = pd.read_excel (contrades)
 
+# Save Consolidated Trades backup file
+df3.to_excel(conbackuppath + todayDate + " - Consolidated Trades.xlsx")
+
 # Define Month and Year columns derived from the Month-Yr column
 df["Month"] = df["Month-Yr"].map(lambda x: str(x)[:3])
 df["Year"] = df["Month-Yr"].map(lambda x: str(x)[-2:])
@@ -99,17 +103,17 @@ df4 = pd.concat(frames)
 # Saves updated Consolidated Trades file
 df4.to_excel(contrades)
 
-# Sets up email
-import win32com.client as win32
-outlook = win32.Dispatch('outlook.application')
-mail = outlook.CreateItem(0)
-mail.To = "christopher.young@ldc.com; jonathan.parker@ldc.com"
-mail.Subject = todayDate + ' Daily Trades'
-mail.Body = 'Please see attached file.'
+# # Sets up email
+# import win32com.client as win32
+# outlook = win32.Dispatch('outlook.application')
+# mail = outlook.CreateItem(0)
+# mail.To = "christopher.young@ldc.com; jonathan.parker@ldc.com"
+# mail.Subject = todayDate + ' Daily Trades'
+# mail.Body = 'Please see attached file.'
 
-# To attach a file to the email (optional):
-attachment  = (r"C:\Users\youngc\Desktop\Day Trades\Consolidated Trades.xlsx")
-mail.Attachments.Add(attachment)
+# # To attach a file to the email (optional):
+# attachment  = (r"C:\Users\youngc\Desktop\Day Trades\Consolidated Trades.xlsx")
+# mail.Attachments.Add(attachment)
 
-mail.Send()
+# mail.Send()
 
