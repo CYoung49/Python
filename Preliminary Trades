@@ -103,17 +103,16 @@ df4 = pd.concat(frames)
 # Saves updated Consolidated Trades file
 df4.to_excel(contrades)
 
-# # Sets up email
-# import win32com.client as win32
-# outlook = win32.Dispatch('outlook.application')
-# mail = outlook.CreateItem(0)
-# mail.To = "christopher.young@ldc.com; jonathan.parker@ldc.com"
-# mail.Subject = todayDate + ' Daily Trades'
-# mail.Body = 'Please see attached file.'
+# Sets up email
+import win32com.client as win32
+outlook = win32.Dispatch('outlook.application')
+mail = outlook.CreateItem(0)
+mail.To = "christopher.young@ldc.com; jonathan.parker@ldc.com"
+mail.Subject = todayDate + ' Daily Trades'
+mail.Body = 'Please see attached file.'
 
-# # To attach a file to the email (optional):
-# attachment  = (r"C:\Users\youngc\Desktop\Day Trades\Consolidated Trades.xlsx")
-# mail.Attachments.Add(attachment)
+# To attach a file to the email (optional):
+attachment  = (r"C:\Users\youngc\Desktop\Day Trades\Consolidated Trades.xlsx")
+mail.Attachments.Add(attachment)
 
-# mail.Send()
-
+mail.Send()
