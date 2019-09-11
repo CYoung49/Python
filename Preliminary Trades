@@ -1,0 +1,96 @@
+import os
+import glob
+import csv
+import openpyxl
+
+# Establishes current date and time
+now = datetime.datetime.now()
+
+# Sets date and file name variables
+currentDate = str(now.month)+"."+str(now.day)+"."+str(now.year)+".xlsx"
+todayDate = str(now.month)+"."+str(now.day)+"."+str(now.year)
+filename = ("TEMP FILE ")
+filepath = (r"C:/Users/youngc/Desktop/Day Trades/TEMP/")
+termfile = (r"C:\Users\youngc\Desktop\Day Trades\Term Accounts.xlsx")
+contrades = (r"C:\Users\youngc\Desktop\Day Trades\Consolidated Trades.xlsx")
+
+# Search for all CSV files in 'filepath' and convert them to XLSX files
+for csvfile in glob.glob(os.path.join(filepath, '*.csv')):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    with open(csvfile, 'rt') as f:
+        reader = csv.reader(f)
+        for r, row in enumerate(reader, start=1):
+            for c, val in enumerate(row, start=1):
+                ws.cell(row=r, column=c).value = val
+    wb.save(os.path.splitext(csvfile)[0] + '.xlsx')
+    
+import tkinter as tk
+from tkinter import filedialog
+import pandas as pd
+import datetime
+
+root= tk.Tk()
+
+canvas1 = tk.Canvas(root, width = 300, height = 300, bg = 'lightsteelblue2', relief = 'raised')
+canvas1.pack()
+
+# Create getExcel function, which imports a selected XLSX file
+def getExcel ():
+    global df
+    
+    import_file_path = filedialog.askopenfilename(initialdir = filepath, title = "Select File", filetypes = (("excel files", "*.xlsx"),("all files","*.*")))
+    
+    xls = (import_file_path)
+    
+    df = pd.read_excel (xls)
+# Creates list of columns to drop from the final table        
+    to_drop = ['Fut/Opt','Trade Type','Transaction Event',
+               'Buy/Sell','Buy Quantity','Sell Quantity',
+               'Product Description','Call/Put',
+               'Underlying Future','Strike','Settle Price',
+               'Session Code','In-House','Mark to Market',
+               'Trader ID','GI Firm','Currency','Exchange',
+               'Underlying Settle Price','Order Number',
+               'Operator ID','Trade Date','Action','ProdCodeMonYr',
+               'Commission/Fees','Trade Value',
+               'New or Asof','Trade Category']
+    
+    df.drop(to_drop, inplace=True, axis=1)
+
+browseButton_XLS = tk.Button(text="      Import Excel File     ", command=getExcel, bg='green', fg='white', font=('helvetica', 12, 'bold'))
+canvas1.create_window(150, 150, window=browseButton_XLS)
+
+root.mainloop()
+
+# Import Term Accounts file to create new dataframe
+df2 = pd.read_excel (termfile, sheet_name='Term Accts')
+
+# Merge both dataframes
+df = (pd.merge(df,df2,on="Account"))
+
+# Import Consolidated Trades
+df3 = pd.read_excel (contrades)
+
+# Append today's trades to Consolidated Trades
+frames = [df,df3]
+df4 = pd.concat(frames)
+
+# Saves the newly created "df" as a new excel file in a new location.
+df.to_excel(filepath + filename + currentDate)
+
+# Saves updated Consolidated Trades file
+df4.to_excel(contrades)
+
+import win32com.client as win32
+outlook = win32.Dispatch('outlook.application')
+mail = outlook.CreateItem(0)
+mail.To = 'christopher.young@ldc.com'
+mail.Subject = todayDate + ' Daily Trades'
+mail.Body = 'Please see attached file.'
+
+# To attach a file to the email (optional):
+attachment  = (r"C:\Users\youngc\Desktop\Day Trades\Consolidated Trades.xlsx")
+mail.Attachments.Add(attachment)
+
+mail.Send()
