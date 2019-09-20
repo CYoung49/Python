@@ -52,14 +52,14 @@ def getExcel ():
     
     df = pd.read_excel (xls)
 # Creates list of columns to drop from the final table        
-    to_drop = ['Fut/Opt','Trade Type','Transaction Event',
+    to_drop = ['Fut/Opt','Trade Type',
                'Buy/Sell','Buy Quantity','Sell Quantity',
                'Product Description','Call/Put',
                'Underlying Future','Strike','Settle Price',
                'Session Code','In-House','Mark to Market',
                'Trader ID','GI Firm','Currency','Exchange',
                'Underlying Settle Price','Order Number',
-               'Operator ID','Trade Date','Action','ProdCodeMonYr',
+               'Operator ID','ProdCodeMonYr',
                'Commission/Fees','Trade Value',
                'New or Asof','Trade Category','Maturity Date']
     
@@ -95,8 +95,17 @@ df = (pd.merge(df,dfMonth,on="Month",how='inner'))
 # Concatenated columns to create the futures contract ticker
 df["Contract"] = df["Ticker"].map(str) + df["Month Code"].map(str) + df["Year"]
 
+import numpy as np
+
+inverse = ['Exercise','Assignment','Expiration','Delete']
+df['Test'] = np.where(np.logical_or(df['Transaction Event'].isin(inverse),df['Action'].isin(inverse)),'True','False')
+
+df['NQ'] = np.where(df['Test'] == 'True', df['Net Quantity'] * -1, df['Net Quantity'])
+
+df['Net Quantity'] = df['NQ']
+
 # Drops unneeded columns from month conversion
-to_drop2 = ['Month','Year','Month Code','Product Code','ProdCode']
+to_drop2 = ['Month','Year','Month Code','Product Code','ProdCode','Test','NQ']
 df.drop(to_drop2, inplace=True, axis=1)
 
 # Saves the newly created "df" as a new excel file in a new location. 
@@ -129,7 +138,7 @@ mail.Subject = todayDate + ' Daily Trades'
 mail.Body = 'Please see attached file.'
 
 # To attach a file to the email (optional):
-attachment  = (r"C:\Users\youngc\Desktop\Day Trades\Consolidated Trades.xlsx")
+attachment  = (file_name)
 mail.Attachments.Add(attachment)
 
 mail.Send()
