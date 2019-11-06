@@ -3,6 +3,11 @@ import glob
 import csv
 import openpyxl
 from pathlib import Path
+import datetime
+import numpy as np
+import tkinter as tk
+from tkinter import filedialog
+import pandas as pd
 
 # Establishes current date and time
 now = datetime.datetime.now()
@@ -10,13 +15,19 @@ now = datetime.datetime.now()
 # Sets date and file name variables
 currentDate = str(now.month)+"."+str(now.day)+"."+str(now.year)+".xlsx"
 todayDate = str(now.month)+"."+str(now.day)+"."+str(now.year)
-filename = ("TEMP FILE ")
-filepath = (r"C:/Users/youngc/Desktop/Day Trades/TEMP/")
-termfile = (r"C:\Users\youngc\Desktop\Day Trades\Term Accounts.xlsx")
-contrades = (r"C:\Users\youngc\Desktop\Day Trades\Consolidated Trades.xlsx")
-conbackuppath = (r"C:/Users/youngc/Desktop/Day Trades/Consolidated Trades Backup/")
-file_name = (filepath + todayDate + " - " + filename + ".xlsx")
-
+altDate = str(now.year)+str(now.month)+str(now.day)
+filename = (" Daily Actual Futures.xlsx")
+filepath = (r"F:/ACCOUNTING/POSITION/Daily/MiddleOffice/Actual Futures/Preliminary Trades/")
+exportDaily = (r"F:/ACCOUNTING/POSITION/Daily/MiddleOffice/Actual Futures/Daily Actual Futures/")
+termfile = (r"F:\ACCOUNTING\POSITION\Daily\MiddleOffice\Actual Futures\Term Accounts.xlsx")
+contrades = (r"F:\ACCOUNTING\POSITION\Daily\MiddleOffice\Actual Futures\Consolidated Actual Futures.xlsx")
+conbackuppath = (r"F:/ACCOUNTING/POSITION\Daily/MiddleOffice/Actual Futures/Consolidated Backup/")
+file_name = (exportDaily + altDate + filename)
+conback_name = (conbackuppath + todayDate + " - Consolidated Trades.xlsx")
+accsavedaily = (r"F:/ACCOUNTING/POSITION/Actual Futures/")
+accsavecon = (r"F:\ACCOUNTING\POSITION\Actual Futures\Consolidated Actual Futures.xlsx")
+accsave = (accsavedaily + altDate + filename)
+           
 # Search for all CSV files in 'filepath' and convert to XLSX files
 for csvfile in glob.glob(os.path.join(filepath, '*.csv')):
     wb = openpyxl.Workbook()
@@ -31,11 +42,6 @@ for csvfile in glob.glob(os.path.join(filepath, '*.csv')):
 # Remove CSV files from directory
 for p in Path(filepath).glob("*.csv"):
     p.unlink()
-    
-import tkinter as tk
-from tkinter import filedialog
-import pandas as pd
-import datetime
 
 root= tk.Tk()
 
@@ -81,7 +87,18 @@ df = (pd.merge(df,df2,on="Account"))
 df3 = pd.read_excel (contrades)
 
 # Save Consolidated Trades backup file
-df3.to_excel(conbackuppath + todayDate + " - Consolidated Trades.xlsx")
+# df3.to_excel(conbackuppath + todayDate + " - Consolidated Trades.xlsx")
+if os.path.isfile(conback_name):
+    expand = 1
+    while True:
+        expand += 1
+        new_conback_name = conback_name.split(".xlsx")[0] + str(expand) + ".xlsx"
+        if os.path.isfile(new_conback_name):
+            continue
+        else:
+            conback_name = new_conback_name
+            break
+df.to_excel(conback_name)
 
 # Define Month and Year columns derived from the Month-Yr column
 df["Month"] = df["Month-Yr"].map(lambda x: str(x)[:3])
@@ -95,9 +112,7 @@ df = (pd.merge(df,dfMonth,on="Month",how='inner'))
 # Concatenated columns to create the futures contract ticker
 df["Contract"] = df["Ticker"].map(str) + df["Month Code"].map(str) + df["Year"]
 
-import numpy as np
-
-inverse = ['Exercise','Assignment','Expiration','Delete']
+inverse = ['Exercise','Assignment','Expiration','Delete','Delivery']
 df['Test'] = np.where(np.logical_or(df['Transaction Event'].isin(inverse),df['Action'].isin(inverse)),'True','False')
 
 df['NQ'] = np.where(df['Test'] == 'True', df['Net Quantity'] * -1, df['Net Quantity'])
@@ -107,6 +122,15 @@ df['Net Quantity'] = df['NQ']
 # Drops unneeded columns from month conversion
 to_drop2 = ['Month','Year','Month Code','Product Code','ProdCode','Test','NQ']
 df.drop(to_drop2, inplace=True, axis=1)
+
+# Convert date columns to mm/dd/yyyy format
+df['Business Date'] = pd.to_datetime(df['Business Date'].astype(str), format='%Y%m%d')
+df['Business Date'] = df['Business Date'].dt.strftime('%m/%d/%Y')
+df['Trade Date'] = pd.to_datetime(df['Trade Date'].astype(str), format='%Y%m%d')
+df['Trade Date'] = df['Trade Date'].dt.strftime('%m/%d/%Y')
+
+# Reorganize columns
+df = df[['Business Date','Account','Transaction Event','Month-Yr','Action','Entity','Commodity','Location','Ticker','Item','Contract','Net Quantity','Trade Date','Trade Price','Loc Code']]
 
 # Saves the newly created "df" as a new excel file in a new location. 
 # Adds number to file name if file name already exists.
@@ -122,23 +146,54 @@ if os.path.isfile(file_name):
             break
 df.to_excel(file_name)
 
+# Freeze top row and create a filter
+wb = openpyxl.load_workbook(file_name)
+sheet = wb.active
+sheet.freeze_panes = 'A2'
+sheet.auto_filter.ref = "B1:P1"
+
+# Resave file, ensuring there are no duplicates
+if os.path.isfile(accsave):
+    expand = 1
+    while True:
+        expand += 1
+        new_accsave = accsave.split(".xlsx")[0] + str(expand) + ".xlsx"
+        if os.path.isfile(new_accsave):
+            continue
+        else:
+            accsave = new_accsave
+            break
+wb.save(accsave)
+
 # Append today's trades to Consolidated Trades
 frames = [df,df3]
 df4 = pd.concat(frames)
+df4 = df4[['Business Date','Account','Transaction Event','Month-Yr','Action','Entity','Commodity','Location','Ticker','Item','Contract','Net Quantity','Trade Date','Trade Price','Loc Code']]
 
 # Saves updated Consolidated Trades file
 df4.to_excel(contrades)
+
+wb2 = openpyxl.load_workbook(contrades)
+sheet = wb2.active
+sheet.freeze_panes = 'A2'
+sheet.auto_filter.ref = "B1:P1"
+wb2.save(accsavecon)
 
 # Sets up email
 import win32com.client as win32
 outlook = win32.Dispatch('outlook.application')
 mail = outlook.CreateItem(0)
-mail.To = "christopher.young@ldc.com; jonathan.parker@ldc.com"
-mail.Subject = todayDate + ' Daily Trades'
-mail.Body = 'Please see attached file.'
+mail.To = "christopher.young@ldc.com"
+# mail.CC = ""
+mail.Subject = '***TEST***' + todayDate + ' Daily Trades'
+mail.Body = 'Please see attached file. \n\nBackup saved to F:\ACCOUNTING\POSITION\Actual Futures.'
 
-# To attach a file to the email (optional):
-attachment  = (file_name)
+# Define file to be emailed
+list_of_files = glob.glob('F:\ACCOUNTING\POSITION\Actual Futures\*Daily*')
+latest_file = max(list_of_files, key=os.path.getctime)
+
+# Attach file to the email
+attachment  = (latest_file)
 mail.Attachments.Add(attachment)
 
 mail.Send()
