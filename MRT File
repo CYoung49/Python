@@ -1,0 +1,68 @@
+import glob
+import os
+
+# Determine most recent file
+list_of_files = glob.glob('C:/Users/youngc/Desktop/MRT File/Upload Position Files/*') # * means all if need specific format then *.csv
+latest_file = max(list_of_files, key=os.path.getctime)
+
+import pandas as pd
+
+# Define files and paths
+forwards = (r"C:\Users\youngc\Desktop\MRT File\Test Files\Forwards.xlsx")
+test = (r"C:\Users\youngc\Desktop\MRT File\Test Files\Test.xlsx")
+
+# Define position file import variable
+xlsx1 = pd.ExcelFile (latest_file)
+
+# Concatenate columns to create Key column for merging dataframes
+dfCashFwd = pd.read_excel(xlsx1, sheetname='CashForward5')
+dfCashFwd["Key"] = dfCashFwd["Position Name"].map(str) + "/" + dfCashFwd["Position Description"].map(str) + "/" + dfCashFwd["Position Type"].map(str)
+dfCNDFwd = pd.read_excel(xlsx1, sheetname='CNDForward5')
+dfCNDFwd["Key"] = dfCNDFwd["Position Name"].map(str) + dfCNDFwd["Position Description"].map(str) + dfCNDFwd["Position Type"].map(str)
+
+# Concatenate Cash and Cash Net DDG sheets into one dateframe
+dfTotalFwd = pd.concat([dfCashFwd,dfCNDFwd],axis=0)
+
+# Remove rows where Position Name column shows a "0"
+dfTotalFwd = dfTotalFwd[dfTotalFwd['Position Name'] != 0]
+
+# Reset Index to single linear iteration (from 123123 to 123456)
+dfTotalFwd = dfTotalFwd.reset_index(drop=True)
+
+keycol = dfTotalFwd['Key']
+dfTotalFwd.drop(labels=['Key'], axis=1,inplace = True)
+dfTotalFwd.insert(0, 'Key', keycol)
+
+# Convert dates in header row with multiple data types into a more readible format
+import datetime
+
+mapper = lambda x: x.strftime("%b-%Y") if isinstance(x, datetime.datetime) else x
+dfTotalFwd.columns = dfTotalFwd.columns.map(mapper)
+
+# Sum rows where the Key is identical
+dfTotalFwd = dfTotalFwd.groupby(['Key'], as_index=False).sum()
+
+# Create a copy of dfTotalFwd
+df = dfTotalFwd
+
+# Reform the dataframe into a new format
+result = df.set_index('Key').stack().reset_index()
+result.columns = ['Key', 'Contract', 'Amt']
+
+# Remove rows where Amt = 0
+df = result[result['Amt'] != 0]
+
+# Define Month and Year columns derived from the Month-Yr column
+df["Month"] = df["Contract"].map(lambda x: str(x)[:3])
+df["Year"] = df["Contract"].map(lambda x: str(x)[-2:])
+
+# Merged Months table with df to convert months to futures codes
+xls2 = pd.ExcelFile (r"C:\Users\youngc\Desktop\MRT File\Months.xlsx")
+dfMonth = pd.read_excel(xls2)
+df = (pd.merge(df,dfMonth,on="Month",how='inner'))
+
+# Save new Positions file
+df.to_excel(test)
+
+# Save new Positions file
+dfTotalFwd.to_excel(forwards)
