@@ -8,6 +8,7 @@ import numpy as np
 import tkinter as tk
 from tkinter import filedialog
 import pandas as pd
+import shutil
 
 # Establishes current date and time
 now = datetime.datetime.now()
@@ -15,18 +16,28 @@ now = datetime.datetime.now()
 # Sets date and file name variables
 currentDate = str(now.month)+"."+str(now.day)+"."+str(now.year)+".xlsx"
 todayDate = str(now.month)+"."+str(now.day)+"."+str(now.year)
+yesterDate = str(now.month)+"."+str(now.day-1)+"."+str(now.year)
 altDate = str(now.year)+str(now.month)+str(now.day)
 filename = (" Daily Actual Futures.xlsx")
-filepath = (r"F:/ACCOUNTING/POSITION/Daily/MiddleOffice/Actual Futures/Preliminary Trades/")
-exportDaily = (r"F:/ACCOUNTING/POSITION/Daily/MiddleOffice/Actual Futures/Daily Actual Futures/")
-termfile = (r"F:\ACCOUNTING\POSITION\Daily\MiddleOffice\Actual Futures\Term Accounts.xlsx")
-contrades = (r"F:\ACCOUNTING\POSITION\Daily\MiddleOffice\Actual Futures\Consolidated Actual Futures.xlsx")
-conbackuppath = (r"F:/ACCOUNTING/POSITION\Daily/MiddleOffice/Actual Futures/Consolidated Backup/")
+filepath = (r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Actual Futures/Preliminary Trades/")
+exportDaily = (r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Actual Futures/Daily Actual Futures/")
+termfile = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Actual Futures\Term Accounts.xlsx")
+contrades = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Actual Futures\Consolidated Actual Futures.xlsx")
+conbackuppath = (r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Actual Futures/Consolidated Backup/")
 file_name = (exportDaily + altDate + filename)
 conback_name = (conbackuppath + todayDate + " - Consolidated Trades.xlsx")
-accsavedaily = (r"F:/ACCOUNTING/POSITION/Actual Futures/")
-accsavecon = (r"F:\ACCOUNTING\POSITION\Actual Futures\Consolidated Actual Futures.xlsx")
+accsavedaily = (r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Actual Futures/")
+accsavecon = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Actual Futures\Consolidated Actual Futures.xlsx")
 accsave = (accsavedaily + altDate + filename)
+targetfile = ("//ebsmeypisf01/PRD_AppShare/CINCH/PRD/archive/prelim*")
+sourcepath = ("//ebsmeypisf01/PRD_AppShare/CINCH/PRD/archive")
+monthfile = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Actual Futures\Months.xlsx")
+
+list_of_files = glob.glob(targetfile)
+latest_file = max(list_of_files, key=os.path.getctime)
+
+for filename in glob.glob(os.path.join(sourcepath)):
+    shutil.copy(latest_file,filepath)
            
 # Search for all CSV files in 'filepath' and convert to XLSX files
 for csvfile in glob.glob(os.path.join(filepath, '*.csv')):
@@ -87,7 +98,7 @@ df = (pd.merge(df,df2,on="Account"))
 df3 = pd.read_excel (contrades)
 
 # Save Consolidated Trades backup file
-# df3.to_excel(conbackuppath + todayDate + " - Consolidated Trades.xlsx")
+# df3.to_excel(conbackuppath + TodayDate + " - Consolidated Trades.xlsx")
 if os.path.isfile(conback_name):
     expand = 1
     while True:
@@ -105,7 +116,7 @@ df["Month"] = df["Month-Yr"].map(lambda x: str(x)[:3])
 df["Year"] = df["Month-Yr"].map(lambda x: str(x)[-2:])
 
 # Merged Months table with df to convert months to futures codes
-xls2 = pd.ExcelFile (r"C:\Users\youngc\Desktop\Day Trades\Months.xlsx")
+xls2 = pd.ExcelFile (monthfile)
 dfMonth = pd.read_excel(xls2)
 df = (pd.merge(df,dfMonth,on="Month",how='inner'))
 
@@ -118,6 +129,9 @@ df['Test'] = np.where(np.logical_or(df['Transaction Event'].isin(inverse),df['Ac
 df['NQ'] = np.where(df['Test'] == 'True', df['Net Quantity'] * -1, df['Net Quantity'])
 
 df['Net Quantity'] = df['NQ']
+
+# Apply factor to Trade Prices
+df['Trade Price'] = df['Trade Price'] / df['Factor']
 
 # Drops unneeded columns from month conversion
 to_drop2 = ['Month','Year','Month Code','Product Code','ProdCode','Test','NQ']
@@ -167,7 +181,7 @@ wb.save(accsave)
 
 # Append today's trades to Consolidated Trades
 frames = [df,df3]
-df4 = pd.concat(frames)
+df4 = pd.concat(frames, sort=True)
 df4 = df4[['Business Date','Account','Transaction Event','Month-Yr','Action','Entity','Commodity','Location','Ticker','Item','Contract','Net Quantity','Trade Date','Trade Price','Loc Code']]
 
 # Saves updated Consolidated Trades file
@@ -183,9 +197,9 @@ wb2.save(accsavecon)
 import win32com.client as win32
 outlook = win32.Dispatch('outlook.application')
 mail = outlook.CreateItem(0)
-mail.To = "christopher.young@ldc.com"
-# mail.CC = ""
-mail.Subject = '***TEST***' + todayDate + ' Daily Trades'
+mail.To = "ANGELA.CLAY@ldc.com;Ben.Clary@ldc.com;Blake.Wilson@ldc.com;Brynna.DeMotte@ldc.com;Jessica.Hibbard@ldc.com;McKenzie.Fowler@ldc.com;MICHELE.BROWN@ldc.com;Neal.Strathman@ldc.com;Shawna.Brueske@ldc.com;Tyler.Hatesohl@ldc.com"
+mail.CC = "christopher.young@ldc.com;Jonathan.Parker@ldc.com;Benjamin.Williams@ldc.com;AMY.KRUEGER@ldc.com;Brandon.Bade@ldc.com;laura.hotalling@ldc.com"
+mail.Subject = todayDate + ' Daily Actual Futures File'
 mail.Body = 'Please see attached file. \n\nBackup saved to F:\ACCOUNTING\POSITION\Actual Futures.'
 
 # Define file to be emailed
