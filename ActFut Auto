@@ -12,12 +12,14 @@ import shutil
 
 # Establishes current date and time
 now = datetime.datetime.now()
+today = datetime.date.today()
 
 # Sets date and file name variables
 currentDate = str(now.month)+"."+str(now.day)+"."+str(now.year)+".xlsx"
 todayDate = str(now.month)+"."+str(now.day)+"."+str(now.year)
 yesterDate = str(now.month)+"."+str(now.day-1)+"."+str(now.year)
-altDate = str(now.year)+str(now.month)+str(now.day)
+# altDate = str(now.year)+str(now.month)+str(now.day)
+altDate = today.strftime("%Y%m%d")
 filename = (" Daily Actual Futures.xlsx")
 filepath = (r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Actual Futures/Preliminary Trades/")
 exportDaily = (r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Actual Futures/Daily Actual Futures/")
@@ -32,6 +34,7 @@ accsave = (accsavedaily + altDate + filename)
 targetfile = ("//ebsmeypisf01/PRD_AppShare/CINCH/PRD/archive/prelim*")
 sourcepath = ("//ebsmeypisf01/PRD_AppShare/CINCH/PRD/archive")
 monthfile = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Actual Futures\Months.xlsx")
+importfile = ("//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Actual Futures/Preliminary Trades/prelim*")
 
 list_of_files = glob.glob(targetfile)
 latest_file = max(list_of_files, key=os.path.getctime)
@@ -54,39 +57,25 @@ for csvfile in glob.glob(os.path.join(filepath, '*.csv')):
 for p in Path(filepath).glob("*.csv"):
     p.unlink()
 
-root= tk.Tk()
+files_list = glob.glob(importfile)
+file_latest = max(files_list, key=os.path.getctime)
 
-canvas1 = tk.Canvas(root, width = 300, height = 300, bg = 'lightsteelblue2', relief = 'raised')
-canvas1.pack()
+xls = (file_latest)
 
-# Create getExcel function, which imports a selected XLSX file
-def getExcel ():
-    global df
-    
-    import_file_path = filedialog.askopenfilename(initialdir = filepath, title = "Select File", filetypes = (("excel files", "*.xlsx"),("all files","*.*")))
-    
-    xls = (import_file_path)
-    
-    df = pd.read_excel (xls)
-# Creates list of columns to drop from the final table        
-    to_drop = ['Fut/Opt','Trade Type',
-               'Buy/Sell','Buy Quantity','Sell Quantity',
-               'Product Description','Call/Put',
-               'Underlying Future','Strike','Settle Price',
-               'Session Code','In-House','Mark to Market',
-               'Trader ID','GI Firm','Currency','Exchange',
-               'Underlying Settle Price','Order Number',
-               'Operator ID','ProdCodeMonYr',
-               'Commission/Fees','Trade Value',
-               'New or Asof','Trade Category','Maturity Date']
-    
-    df.drop(to_drop, inplace=True, axis=1)
-    
-    
-browseButton_XLS = tk.Button(text="      Import Excel File     ", command=getExcel, bg='green', fg='white', font=('helvetica', 12, 'bold'))
-canvas1.create_window(150, 150, window=browseButton_XLS)
+df = pd.read_excel (xls)
 
-root.mainloop()
+to_drop = ['Fut/Opt','Trade Type',
+            'Buy/Sell','Buy Quantity','Sell Quantity',
+            'Product Description','Call/Put',
+            'Underlying Future','Strike','Settle Price',
+            'Session Code','In-House','Mark to Market',
+            'Trader ID','GI Firm','Currency','Exchange',
+            'Underlying Settle Price','Order Number',
+            'Operator ID','ProdCodeMonYr',
+            'Commission/Fees','Trade Value',
+            'New or Asof','Trade Category','Maturity Date']
+    
+df.drop(to_drop, inplace=True, axis=1)
 
 # Import Term Accounts file to create new dataframe
 df2 = pd.read_excel (termfile, sheet_name='Term Accts')
@@ -134,7 +123,7 @@ df['Net Quantity'] = df['NQ']
 df['Trade Price'] = df['Trade Price'] / df['Factor']
 
 # Drops unneeded columns from month conversion
-to_drop2 = ['Month','Year','Month Code','Product Code','ProdCode','Test','NQ']
+to_drop2 = ['Month','Year','Month Code','Product Code','ProdCode','Test','NQ','Factor']
 df.drop(to_drop2, inplace=True, axis=1)
 
 # Convert date columns to mm/dd/yyyy format
