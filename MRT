@@ -2,26 +2,29 @@ import glob
 import os
 
 # Determine most recent file
-list_of_files = glob.glob('C:/Users/youngc/Desktop/MRT File/Upload Position Files/*') # * means all if need specific format then *.csv
+list_of_files = glob.glob('F:/ACCOUNTING/POSITION/Daily/MiddleOffice/SMART/*EOD.xlsx') # * means all if need specific format then *.csv
 latest_file = max(list_of_files, key=os.path.getctime)
+print(latest_file)
 
 import pandas as pd
 
 # Define files and paths
-forwards = (r"C:\Users\youngc\Desktop\MRT File\Test Files\Forwards.xlsx")
-test = (r"C:\Users\youngc\Desktop\MRT File\Test Files\Test.xlsx")
+forwards = (r"F:\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\Forwards.xlsx")
+test = (r"F:\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\Test.xlsx")
+filename = os.path.basename(latest_file)
+
 
 # Define position file import variable
 xlsx1 = pd.ExcelFile (latest_file)
 
 # Concatenate columns to create Key column for merging dataframes
-dfCashFwd = pd.read_excel(xlsx1, sheetname='CashForward5')
+dfCashFwd = pd.read_excel(xlsx1, sheet_name='CashForward5')
 dfCashFwd["Key"] = dfCashFwd["Position Name"].map(str) + "/" + dfCashFwd["Position Description"].map(str) + "/" + dfCashFwd["Position Type"].map(str)
-dfCNDFwd = pd.read_excel(xlsx1, sheetname='CNDForward5')
+dfCNDFwd = pd.read_excel(xlsx1, sheet_name='CNDForward5')
 dfCNDFwd["Key"] = dfCNDFwd["Position Name"].map(str) + dfCNDFwd["Position Description"].map(str) + dfCNDFwd["Position Type"].map(str)
 
 # Concatenate Cash and Cash Net DDG sheets into one dateframe
-dfTotalFwd = pd.concat([dfCashFwd,dfCNDFwd],axis=0)
+dfTotalFwd = pd.concat([dfCashFwd,dfCNDFwd],axis=0, sort=True)
 
 # Remove rows where Position Name column shows a "0"
 dfTotalFwd = dfTotalFwd[dfTotalFwd['Position Name'] != 0]
@@ -57,9 +60,23 @@ df["Month"] = df["Contract"].map(lambda x: str(x)[:3])
 df["Year"] = df["Contract"].map(lambda x: str(x)[-2:])
 
 # Merged Months table with df to convert months to futures codes
-xls2 = pd.ExcelFile (r"C:\Users\youngc\Desktop\MRT File\Months.xlsx")
+xls2 = pd.ExcelFile (r"F:\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\Months.xlsx")
 dfMonth = pd.read_excel(xls2)
 df = (pd.merge(df,dfMonth,on="Month",how='inner'))
+
+# Merge Sbox table into df
+xls3 = pd.ExcelFile (r"F:\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\SAP_Sbox.xlsx")
+dfSbox = pd.read_excel(xls3)
+df = (pd.merge(df,dfSbox,on="Key",how='inner'))
+df = df.fillna('')
+
+import numpy as np
+tester = ['#',' ','']
+df['Test'] = np.where(np.logical_or(df['Ticker'].isin(tester),df['Month_Code'].isin(tester),df['Year'].isin(tester)),'True','False')
+df['Contract'] = np.where(df['Test'] == 'False', df["Ticker"].map(str) + df["Month_Code"].map(str) + df["Year"], '')
+
+to_drop = ['Possible_Sbox','Month','Year','Month_Code','Ticker','Test']
+df.drop(to_drop, inplace=True, axis=1)
 
 # Save new Positions file
 df.to_excel(test)
