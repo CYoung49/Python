@@ -5,40 +5,45 @@ import openpyxl
 from pathlib import Path
 import datetime
 import numpy as np
-import tkinter as tk
-from tkinter import filedialog
 import pandas as pd
 import shutil
+import re
 
 # Establishes current date and time
 now = datetime.datetime.now()
 today = datetime.date.today()
 
-# Sets date and file name variables
+# Sets date and path variables
 currentDate = str(now.month)+"."+str(now.day)+"."+str(now.year)+".xlsx"
 todayDate = str(now.month)+"."+str(now.day)+"."+str(now.year)
 yesterDate = str(now.month)+"."+str(now.day-1)+"."+str(now.year)
-# altDate = str(now.year)+str(now.month)+str(now.day)
-altDate = today.strftime("%Y%m%d")
 filename = (" Daily Actual Futures.xlsx")
 filepath = (r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Actual Futures/Preliminary Trades/")
 exportDaily = (r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Actual Futures/Daily Actual Futures/")
 termfile = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Actual Futures\Term Accounts.xlsx")
 contrades = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Actual Futures\Consolidated Actual Futures.xlsx")
 conbackuppath = (r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Actual Futures/Consolidated Backup/")
-file_name = (exportDaily + altDate + filename)
-conback_name = (conbackuppath + todayDate + " - Consolidated Trades.xlsx")
 accsavedaily = (r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Actual Futures/")
 accsavecon = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Actual Futures\Consolidated Actual Futures.xlsx")
-accsave = (accsavedaily + altDate + filename)
-targetfile = ("//ebsmeypisf01/PRD_AppShare/CINCH/PRD/archive/prelim*")
-sourcepath = ("//ebsmeypisf01/PRD_AppShare/CINCH/PRD/archive")
+targetfile = ("//ebsmeypisf01/PRD_AppShare/CINCH/PRD/prelim*")
+sourcepath = ("//ebsmeypisf01/PRD_AppShare/CINCH/PRD")
 monthfile = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Actual Futures\Months.xlsx")
 importfile = ("//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Actual Futures/Preliminary Trades/prelim*")
 
+# check for any files in the target directory with the keyword in the filename
 list_of_files = glob.glob(targetfile)
 latest_file = max(list_of_files, key=os.path.getctime)
 
+# Grab date from "targetfile" filename (in YYYMMDD format)
+findDate = re.search("([0-9]{4}[0-9]{2}[0-9]{2})", latest_file)
+altDate = findDate.group()
+
+# assign filename names
+accsave = (accsavedaily + altDate + filename)
+file_name = (exportDaily + altDate + filename)
+conback_name = (conbackuppath + todayDate + " - Consolidated Trades.xlsx")
+
+# Copy the latest file from archive to Middle Office
 for filename in glob.glob(os.path.join(sourcepath)):
     shutil.copy(latest_file,filepath)
            
@@ -57,13 +62,16 @@ for csvfile in glob.glob(os.path.join(filepath, '*.csv')):
 for p in Path(filepath).glob("*.csv"):
     p.unlink()
 
+# Define the most recently created file
 files_list = glob.glob(importfile)
 file_latest = max(files_list, key=os.path.getctime)
 
 xls = (file_latest)
 
+# Import file into Pandas
 df = pd.read_excel (xls)
 
+# Define unneeded columns and remove
 to_drop = ['Fut/Opt','Trade Type',
             'Buy/Sell','Buy Quantity','Sell Quantity',
             'Product Description','Call/Put',
@@ -104,19 +112,27 @@ df.to_excel(conback_name)
 df["Month"] = df["Month-Yr"].map(lambda x: str(x)[:3])
 df["Year"] = df["Month-Yr"].map(lambda x: str(x)[-2:])
 
-# Merged Months table with df to convert months to futures codes
+# Merge Months table with df to convert months to futures codes
 xls2 = pd.ExcelFile (monthfile)
 dfMonth = pd.read_excel(xls2)
 df = (pd.merge(df,dfMonth,on="Month",how='inner'))
 
-# Concatenated columns to create the futures contract ticker
+# Concatenate columns to create the futures contract ticker
 df["Contract"] = df["Ticker"].map(str) + df["Month Code"].map(str) + df["Year"]
 
+# Assign keywords to look for
 inverse = ['Exercise','Assignment','Expiration','Delete','Delivery']
+
+# Look for keywords in the "Transaction Event" or "Action" columns. If found, assign a 'True' to 
+# the "Test" column. If not found, assign a 'False' to the "Test" column.
 df['Test'] = np.where(np.logical_or(df['Transaction Event'].isin(inverse),df['Action'].isin(inverse)),'True','False')
 
+# Where the "Test" column has a 'True', multiply the "Net Quantity" column by -1 and input the 
+# answer into the "NQ" column. Where the "Test" column has a 'False', enter the "Net Quantity" 
+# column value into the "NQ" column.
 df['NQ'] = np.where(df['Test'] == 'True', df['Net Quantity'] * -1, df['Net Quantity'])
 
+# Reassign the "Net Quantity" column to equal the "NQ" column
 df['Net Quantity'] = df['NQ']
 
 # Apply factor to Trade Prices
@@ -149,7 +165,7 @@ if os.path.isfile(file_name):
             break
 df.to_excel(file_name)
 
-# Freeze top row and create a filter
+# Freeze top row and create a filter for the daily file.
 wb = openpyxl.load_workbook(file_name)
 sheet = wb.active
 sheet.freeze_panes = 'A2'
@@ -176,6 +192,7 @@ df4 = df4[['Business Date','Account','Transaction Event','Month-Yr','Action','En
 # Saves updated Consolidated Trades file
 df4.to_excel(contrades)
 
+# Freeze top row and create a filter for the consolidated file.
 wb2 = openpyxl.load_workbook(contrades)
 sheet = wb2.active
 sheet.freeze_panes = 'A2'
