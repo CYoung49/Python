@@ -1,0 +1,106 @@
+import glob
+import os
+
+# Determine most recent file
+# list_of_files = glob.glob('F:/ACCOUNTING/POSITION/Daily/MiddleOffice/SMART/*mkt*') # * means all if need specific format then *.csv
+list_of_files = glob.glob('F:/ACCOUNTING/POSITION/Daily/MiddleOffice/Projects/MRT/*mkt*') # * means all if need specific format then *.csv
+
+latest_file = max(list_of_files, key=os.path.getctime)
+
+import pandas as pd
+
+# Define files and paths
+futures = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\Test\Futures.xlsx")
+test = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\Test\FutTest.xlsx")
+futSave = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\Test\Fut_Test.xlsx")
+filename = os.path.basename(latest_file)
+
+
+# Define position file import variable
+xlsx1 = pd.ExcelFile (latest_file)
+
+# Concatenate columns to create Key column for merging dataframes
+dfFutFwd = pd.read_excel(xlsx1, sheet_name='FutForward5')
+dfFutFwd["Key"] = dfFutFwd["Position Name"].map(str) + "/" + dfFutFwd["Position Description"].map(str) + "/" + dfFutFwd["Position Type"].map(str)
+
+# Remove rows where Position Name column shows a "0"
+dfFutFwd = dfFutFwd[dfFutFwd['Position Name'] != 0]
+
+# Reset Index to single linear iteration (from 123123 to 123456)
+dfFutFwd = dfFutFwd.reset_index(drop=True)
+
+keycol = dfFutFwd['Key']
+dfFutFwd.drop(labels=['Key'], axis=1,inplace = True)
+dfFutFwd.insert(0, 'Key', keycol)
+
+# Convert dates in header row with multiple data types into a more readible format
+import datetime
+
+mapper = lambda x: x.strftime("%b-%Y") if isinstance(x, datetime.datetime) else x
+dfFutFwd.columns = dfFutFwd.columns.map(mapper)
+
+# Sum rows where the Key is identical
+dfFutFwd = dfFutFwd.groupby(['Key'], as_index=False).sum()
+
+# Create a copy of dfFutFwd
+df = dfFutFwd
+
+# Reform the dataframe into a new format
+result = df.set_index('Key').stack().reset_index()
+result.columns = ['Key', 'Contract', 'Amt']
+
+# Remove rows where Amt = 0
+df = result[result['Amt'] != 0]
+
+# Define Month and Year columns derived from the Month-Yr column
+df["Month"] = df["Contract"].map(lambda x: str(x)[:3])
+df["Year"] = df["Contract"].map(lambda x: str(x)[-2:])
+
+# Merged Months table with df to convert months to futures codes
+xls2 = pd.ExcelFile (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\Months.xlsx")
+dfMonth = pd.read_excel(xls2)
+df = (pd.merge(df,dfMonth,on="Month",how='inner'))
+
+# Merge Sbox table into df
+xls3 = pd.ExcelFile (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\SBOX_Futures.xlsx")
+dfSbox = pd.read_excel(xls3)
+df = (pd.merge(df,dfSbox,on="Key",how='inner'))
+df = df.fillna('')
+
+# Create Contract column
+import numpy as np
+tester = ['XXX','']
+
+df['Test'] = np.where((df['Ticker'].isin(tester)),'True','False')
+df['Contract'] = np.where(df['Test'] == 'False', df["Ticker"].map(str) + df["Month_Code"].map(str) + df["Year"], '')
+
+# Create BBG mnemonic column
+df['BBGTest'] = np.where((df['BBG'].isin(tester)),'True','False')
+df['BBGYear'] = df['Year'].str[-1:]
+df['Deal BBG mnemonic'] = np.where(df['BBGTest'] == 'False', df["BBG"].map(str) + df["Month_Code"].map(str) + df["BBGYear"].map(str) + " Comdty", '')
+
+to_drop = ['Possible_Sbox','Month','Year','Month_Code','Ticker','Test','ME_Day','BBGTest','BBGYear']
+df.drop(to_drop, inplace=True, axis=1)
+
+# Save new Positions file
+# df.to_excel(test)
+
+# Save new Positions file
+
+# dfFutFwd.to_excel(futures)
+
+futSave = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\Test\Fut_Test.xlsx")
+
+dfFut = df
+
+dfFut.rename(columns = {'SBOX':'ID'}, inplace = True)
+dfFut.rename(columns = {'UOM':'Amount UOM'}, inplace = True)
+dfFut.rename(columns = {'Ccode':'Legacy cashID'}, inplace = True)
+dfFut.rename(columns = {'Amt':'Amount Total'}, inplace = True)
+
+# to_drop2 = ['Key','Contract']
+# dfFwd.drop(to_drop2, inplace=True, axis=1)
+
+dfFut = dfFut[['Key','ID','Deal BBG mnemonic','Amount Total','Amount UOM','STRATEGY']]
+
+dfFut.to_excel(futSave,index=False)
