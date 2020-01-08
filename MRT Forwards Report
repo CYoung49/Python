@@ -2,8 +2,8 @@ import glob
 import os
 
 # Determine most recent file
-list_of_files = glob.glob('F:/ACCOUNTING/POSITION/Daily/MiddleOffice/Projects/MRT/*mkt*') # * means all if need specific format then *.csv
-# list_of_files = glob.glob('F:/ACCOUNTING/POSITION/Daily/MiddleOffice/Projects/MRT/*mkt*')
+list_of_files = glob.glob('//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Projects/MRT/*mkt*') # * means all if need specific format then *.csv
+# list_of_files = glob.glob('//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Projects/MRT/*mkt*')
 latest_file = min(list_of_files, key=os.path.getctime)
 
 import pandas as pd
