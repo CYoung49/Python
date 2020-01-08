@@ -2,15 +2,16 @@ import glob
 import os
 
 # Determine most recent file
-list_of_files = glob.glob('F:/ACCOUNTING/POSITION/Daily/MiddleOffice/SMART/*mkt*') # * means all if need specific format then *.csv
-latest_file = max(list_of_files, key=os.path.getctime)
-print(latest_file)
+list_of_files = glob.glob('F:/ACCOUNTING/POSITION/Daily/MiddleOffice/Projects/MRT/*mkt*') # * means all if need specific format then *.csv
+# list_of_files = glob.glob('F:/ACCOUNTING/POSITION/Daily/MiddleOffice/Projects/MRT/*mkt*')
+latest_file = min(list_of_files, key=os.path.getctime)
 
 import pandas as pd
 
 # Define files and paths
-forwards = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\Forwards.xlsx")
-test = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\Test.xlsx")
+forwards = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\Test\Forwards.xlsx")
+test = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\Test\ForTest.xlsx")
+fwdSave = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\Test\FWD_Test.xlsx")
 filename = os.path.basename(latest_file)
 
 
@@ -19,9 +20,9 @@ xlsx1 = pd.ExcelFile (latest_file)
 
 # Concatenate columns to create Key column for merging dataframes
 dfCashFwd = pd.read_excel(xlsx1, sheet_name='CashForward5')
-dfCashFwd["Key"] = dfCashFwd["Position Name"].map(str) + "/" + dfCashFwd["Position Description"].map(str) + "/" + dfCashFwd["Position Type"].map(str)
+dfCashFwd["Key"] = dfCashFwd["Position Name"].map(str) + "/" + dfCashFwd["Position Description"].map(str) + "/" + dfCashFwd["Position Type"].map(str) + "/" + dfCashFwd["Contract Code"].map(str)
 dfCNDFwd = pd.read_excel(xlsx1, sheet_name='CNDForward5')
-dfCNDFwd["Key"] = dfCNDFwd["Position Name"].map(str) + dfCNDFwd["Position Description"].map(str) + dfCNDFwd["Position Type"].map(str)
+dfCNDFwd["Key"] = dfCNDFwd["Position Name"].map(str) + "/" + dfCNDFwd["Position Description"].map(str) + "/" + dfCNDFwd["Position Type"].map(str) + "/" + dfCNDFwd["Contract Code"].map(str)
 
 # Concatenate Cash and Cash Net DDG sheets into one dateframe
 dfTotalFwd = pd.concat([dfCashFwd,dfCNDFwd],axis=0, sort=True)
@@ -65,7 +66,7 @@ dfMonth = pd.read_excel(xls2)
 df = (pd.merge(df,dfMonth,on="Month",how='inner'))
 
 # Merge Sbox table into df
-xls3 = pd.ExcelFile (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\SAP_Sbox.xlsx")
+xls3 = pd.ExcelFile (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\SBOX.xlsx")
 dfSbox = pd.read_excel(xls3)
 df = (pd.merge(df,dfSbox,on="Key",how='inner'))
 df = df.fillna('')
@@ -76,11 +77,30 @@ tester = ['XXX']
 df['Test'] = np.where((df['Ticker'].isin(tester)),'True','False')
 df['Contract'] = np.where(df['Test'] == 'False', df["Ticker"].map(str) + df["Month_Code"].map(str) + df["Year"], '')
 
-to_drop = ['Possible_Sbox','Month','Year','Month_Code','Ticker','Test']
+df["Contract Delivery End Date"] = df["Month"].map(str)+"-"+df["ME_Day"].map(str)+"-"+"20"+df["Year"]
+
+to_drop = ['Possible_Sbox','Month','Year','Month_Code','Ticker','Test','ME_Day']
 df.drop(to_drop, inplace=True, axis=1)
 
 # Save new Positions file
 df.to_excel(test)
 
 # Save new Positions file
+
 dfTotalFwd.to_excel(forwards)
+
+fwdSave = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\Test\FWD_Test.xlsx")
+
+dfFwd = df
+
+dfFwd.rename(columns = {'SBOX':'ID'}, inplace = True)
+dfFwd.rename(columns = {'UOM':'Amount UOM'}, inplace = True)
+dfFwd.rename(columns = {'Ccode':'Legacy cashID'}, inplace = True)
+dfFwd.rename(columns = {'Amt':'Amount Total'}, inplace = True)
+
+# to_drop2 = ['Key','Contract']
+# dfFwd.drop(to_drop2, inplace=True, axis=1)
+
+dfFwd = dfFwd[['Key','ID','Legacy cashID','Purchase_Sale','Amount Total','Amount UOM','Contract Delivery End Date','STRATEGY']]
+
+dfFwd.to_excel(fwdSave,index=False)
