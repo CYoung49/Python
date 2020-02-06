@@ -2,8 +2,8 @@ import glob
 import os
 
 # Determine most recent file
-# list_of_files = glob.glob('F:/ACCOUNTING/POSITION/Daily/MiddleOffice/SMART/*mkt*') # * means all if need specific format then *.csv
-list_of_files = glob.glob('F:/ACCOUNTING/POSITION/Daily/MiddleOffice/Projects/MRT/*mkt*') # * means all if need specific format then *.csv
+list_of_files = glob.glob('F:/ACCOUNTING/POSITION/Daily/MiddleOffice/SMART/*mkt*') # * means all if need specific format then *.csv
+# list_of_files = glob.glob('F:/ACCOUNTING/POSITION/Daily/MiddleOffice/Projects/MRT/*mkt*') # * means all if need specific format then *.csv
 
 latest_file = max(list_of_files, key=os.path.getctime)
 
@@ -83,11 +83,10 @@ to_drop = ['Possible_Sbox','Month','Year','Month_Code','Ticker','Test','ME_Day',
 df.drop(to_drop, inplace=True, axis=1)
 
 # Save new Positions file
-# df.to_excel(test)
+df.to_excel(test)
 
 # Save new Positions file
-
-# dfFutFwd.to_excel(futures)
+dfFutFwd.to_excel(futures)
 
 futSave = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Projects\MRT\Test\Fut_Test.xlsx")
 
