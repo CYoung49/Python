@@ -26,7 +26,7 @@ conbackuppath = (r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleO
 accsavedaily = (r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Actual Futures/")
 accsavecon = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Actual Futures\Consolidated Actual Futures.xlsx")
 targetfile = ("//ebsmeypisf01/PRD_AppShare/CINCH/PRD/prelim*")
-sourcepath = ("//ebsmeypisf01/PRD_AppShare/CINCH/PRD")
+sourcepath = ("//ebsmeypisf01/PRD_AppShare/CINCH/PRD/")
 monthfile = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\POSITION\Daily\MiddleOffice\Actual Futures\Months.xlsx")
 importfile = ("//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Actual Futures/Preliminary Trades/prelim*")
 
@@ -204,7 +204,7 @@ import win32com.client as win32
 outlook = win32.Dispatch('outlook.application')
 mail = outlook.CreateItem(0)
 mail.To = "ANGELA.CLAY@ldc.com;Ben.Clary@ldc.com;Blake.Wilson@ldc.com;Brynna.DeMotte@ldc.com;Jessica.Hibbard@ldc.com;McKenzie.Fowler@ldc.com;MICHELE.BROWN@ldc.com;Neal.Strathman@ldc.com;Shawna.Brueske@ldc.com;Tyler.Hatesohl@ldc.com"
-mail.CC = "christopher.young@ldc.com;Jonathan.Parker@ldc.com;Benjamin.Williams@ldc.com;AMY.KRUEGER@ldc.com;Brandon.Bade@ldc.com;laura.hotalling@ldc.com"
+mail.CC = "christopher.young@ldc.com;Jonathan.Parker@ldc.com;Benjamin.Williams@ldc.com;AMY.KRUEGER@ldc.com;Brandon.Bade@ldc.com"
 mail.Subject = todayDate + ' Daily Actual Futures File'
 mail.Body = 'Please see attached file. \n\nBackup saved to F:\ACCOUNTING\POSITION\Actual Futures.'
 
