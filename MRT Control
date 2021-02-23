@@ -1,0 +1,144 @@
+import xlrd
+import pandas as pd
+import openpyxl
+from openpyxl import load_workbook
+import os
+import datetime
+
+print("Getting started.")
+
+# Establishes current date and time
+now = datetime.datetime.now()
+today = datetime.date.today()
+
+# Sets date and path variables
+currentDate = str(now.month)+"."+str(now.day)+"."+str(now.year)+".xlsx"
+todayDate = str(now.month)+"."+str(now.day)+"."+str(now.year)
+saveDate = datetime.datetime.strftime(now, '%m.%d.%Y %H%M%S')
+yesterDate = str(now.month)+"."+str(now.day-1)+"."+str(now.year)
+filename = (" MRT File.xlsx")
+save_path = (r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/Metric Ton Position/Controls/")
+resultname = ("MRT Positions Check ")
+
+# Define import and save files
+MRTwb = (r"\\kc-grain-vol\KC-GRAIN-VOL\ACCOUNTING\Metric Ton Position\mktRiskPosnGeneratorKC_1016.xlsm")
+saveToday = (save_path + todayDate + filename)
+saveYday = (save_path + yesterDate + filename)
+saveResult = (save_path + resultname + saveDate + ".xlsx")
+
+print("Loading " + todayDate + " positions.")
+
+# Define columns to use from import worksheet
+fields = ['riskBox','strategy','sboxLabel','loadSheet','desc','Exchange','tmpltRowLabel','Grand Total']
+# Import today's file using the 27th to last worksheet starting on row 5
+dftoday = pd.read_excel(MRTwb, -27, header = 4, usecols = fields)
+
+# Fill empty cells with data so a "Key" column can be created using cols A-H
+dftoday['riskBox'].fillna(method='ffill',inplace=True)
+dftoday['strategy'].fillna(method='ffill',inplace=True)
+dftoday['sboxLabel'].fillna(method='ffill',inplace=True)
+dftoday['loadSheet'].fillna(method='ffill',inplace=True)
+dftoday['desc'].fillna(method='ffill',inplace=True)
+dftoday['Exchange'].fillna(method='ffill',inplace=True)
+dftoday['tmpltRowLabel'].fillna(method='ffill',inplace=True)
+
+# create "Key" column for comparison
+dftoday['Key'] = dftoday["riskBox"].map(str) + "/" + dftoday["strategy"].map(str) + "/" + dftoday["sboxLabel"].map(str) + "/" + dftoday["loadSheet"].map(str) + "/" + dftoday["desc"].map(str) + "/" + dftoday["Exchange"].map(str) + "/" + dftoday["tmpltRowLabel"].map(str)
+# Reorder columns
+dftoday = dftoday[['Key','Grand Total']]
+
+print("Loading " + yesterDate + " positions.")
+
+# Import yesterday's file using the 28th to last worksheet starting on row 5
+dfyday = pd.read_excel(MRTwb, -28, header = 4, usecols = fields)
+
+# Fill empty cells with data so a "Key" column can be created using cols A-H
+dfyday['riskBox'].fillna(method='ffill',inplace=True)
+dfyday['strategy'].fillna(method='ffill',inplace=True)
+dfyday['sboxLabel'].fillna(method='ffill',inplace=True)
+dfyday['loadSheet'].fillna(method='ffill',inplace=True)
+dfyday['desc'].fillna(method='ffill',inplace=True)
+dfyday['Exchange'].fillna(method='ffill',inplace=True)
+dfyday['tmpltRowLabel'].fillna(method='ffill',inplace=True)
+
+# create "Key" column for comparison
+dfyday['Key'] = dfyday["riskBox"].map(str) + "/" + dfyday["strategy"].map(str) + "/" + dfyday["sboxLabel"].map(str) + "/" + dfyday["loadSheet"].map(str) + "/" + dfyday["desc"].map(str) + "/" + dfyday["Exchange"].map(str) + "/" + dfyday["tmpltRowLabel"].map(str)
+# Reorder columns
+dfyday = dfyday[['Key','Grand Total']]
+
+# These are test files that don't need to be saved
+# Save test files
+# dftoday.to_excel(saveToday, index=False)
+# dfyday.to_excel(saveYday, index=False)
+
+# Merge today and yesterday into one dataframe
+dfResult = pd.merge(dftoday, dfyday, how="outer", on="Key")
+dfResult.rename(columns = {'Grand Total_x':'Today'}, inplace = True)
+dfResult.rename(columns = {'Grand Total_y':'Yesterday'}, inplace = True)
+
+# Add new columns for deltas
+dfResult['Change'] = (dfResult["Today"]-dfResult["Yesterday"])
+dfResult['PctChg'] = (dfResult["Today"]-dfResult["Yesterday"])/dfResult["Today"]
+
+# Create new columns out of the Key column
+dfResult[['riskBox','strategy','sboxLabel','loadSheet','desc','Exchange','tmpltRowLabel']] = dfResult.Key.str.split("/",expand=True)
+dfResult = dfResult[['riskBox','strategy','sboxLabel','loadSheet','desc','Exchange','tmpltRowLabel','Yesterday','Today','Change','PctChg']]
+
+print("Saving control file.")
+
+dfResult.to_excel(saveResult, index=False)
+
+# Determine positions on today's file not on yesterday's file
+new_pos = dftoday.merge(dfyday,on=["Key"])
+new_result = dftoday[(~dftoday.Key.isin(new_pos.Key))]
+
+file_name = saveResult
+
+print("Adding sheet for new positions.")
+
+writer = pd.ExcelWriter(file_name, engine='openpyxl')
+
+if os.path.exists(file_name):
+    book = openpyxl.load_workbook(file_name)
+    writer.book = book
+
+# Iterates through all rows. Solves error when no rows exist.
+for index, row in new_result.iterrows():
+    
+# Split "Key" column into multiple columns
+    new_result[['riskBox','strategy','sboxLabel','loadSheet','desc','Exchange','tmpltRowLabel']] = new_result.Key.str.split("/",expand=True)
+# Reorder columns
+    new_result = new_result[['riskBox','strategy','sboxLabel','loadSheet','desc','Exchange','tmpltRowLabel','Grand Total']]
+
+# Save results
+new_result.to_excel(writer, sheet_name="New_Pos", index=False)
+writer.save()
+writer.close()
+
+# Determine positions on yesterday's file not on today's file
+old_pos = dfyday.merge(dftoday,on=["Key"])
+old_result = dfyday[(~dfyday.Key.isin(new_pos.Key))]
+
+file_name = saveResult
+
+print("Adding sheet for old positions.")
+
+writer = pd.ExcelWriter(file_name, engine='openpyxl')
+
+if os.path.exists(file_name):
+    book = openpyxl.load_workbook(file_name)
+    writer.book = book
+
+# Iterates through all rows. Solves error when no rows exist.
+for index, row in new_result.iterrows():
+# Split "Key" column into multiple columns
+    old_result[['riskBox','strategy','sboxLabel','loadSheet','desc','Exchange','tmpltRowLabel']] = old_result.Key.str.split("/",expand=True)
+# Reorder columns
+    old_result = new_result[['riskBox','strategy','sboxLabel','loadSheet','desc','Exchange','tmpltRowLabel','Grand Total']]
+
+# Save results
+old_result.to_excel(writer, sheet_name="Removed_Pos", index=False)
+writer.save()
+writer.close()
+
+print("DONE!")
