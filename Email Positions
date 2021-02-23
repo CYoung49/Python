@@ -1,0 +1,231 @@
+import os
+import glob
+import csv
+import openpyxl
+from pathlib import Path
+import datetime
+import numpy as np
+import pandas as pd
+import shutil
+import re
+
+#Global Mail Body
+mailnote = 'Please review the positions.'
+
+USConfile = glob.glob(r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Positions/US*")
+latest_USConfile = max(USConfile, key=os.path.getctime)
+USConfilename = os.path.basename(latest_USConfile)
+
+CPfile = glob.glob(r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Positions/CP*")
+latest_CPfile = max(CPfile, key=os.path.getctime)
+CPfilename = os.path.basename(latest_CPfile)
+
+KCConfile = glob.glob(r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Positions/KC Consolidated*")
+latest_KCConfile = max(KCConfile, key=os.path.getctime)
+KCConfilename = os.path.basename(latest_KCConfile)
+
+CGFfile = glob.glob(r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Positions/CGF*")
+latest_CGFfile = max(CGFfile, key=os.path.getctime)
+CGFfilename = os.path.basename(latest_CGFfile)
+
+CGFDDGfile = glob.glob(r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Positions/CGFDDG*")
+latest_CGFDDGfile = max(CGFDDGfile, key=os.path.getctime)
+CGFDDGfilename = os.path.basename(latest_CGFDDGfile)
+
+DDGfile = glob.glob(r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Positions/DDG*")
+latest_DDGfile = max(DDGfile, key=os.path.getctime)
+DDGfilename = os.path.basename(latest_DDGfile)
+
+PNWfile = glob.glob(r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Positions/PNW*")
+latest_PNWfile = max(PNWfile, key=os.path.getctime)
+PNWfilename = os.path.basename(latest_PNWfile)
+
+NORfile = glob.glob(r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Positions/NOR*")
+latest_NORfile = max(NORfile, key=os.path.getctime)
+NORfilename = os.path.basename(latest_NORfile)
+
+KCEfile = glob.glob(r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Positions/KCE*")
+latest_KCEfile = max(KCEfile, key=os.path.getctime)
+KCEfilename = os.path.basename(latest_KCEfile)
+
+GJfile = glob.glob(r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Positions/GJ*")
+latest_GJfile = max(GJfile, key=os.path.getctime)
+GJfilename = os.path.basename(latest_GJfile)
+
+WMEMfile = glob.glob(r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Positions/WMEM*")
+latest_WMEMfile = max(WMEMfile, key=os.path.getctime)
+WMEMfilename = os.path.basename(latest_WMEMfile)
+
+RSDfile = glob.glob(r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Positions/RSD*")
+latest_RSDfile = max(RSDfile, key=os.path.getctime)
+RSDfilename = os.path.basename(latest_RSDfile)
+
+PATfile = glob.glob(r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Positions/PAT*")
+latest_PATfile = max(PATfile, key=os.path.getctime)
+PATfilename = os.path.basename(latest_PATfile)
+
+STLfile = glob.glob(r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Positions/STL*")
+latest_STLfile = max(STLfile, key=os.path.getctime)
+STLfilename = os.path.basename(latest_STLfile)
+
+NATfile = glob.glob(r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Positions/NAT*")
+latest_NATfile = max(NATfile, key=os.path.getctime)
+NATfilename = os.path.basename(latest_NATfile)
+
+CPpos = (latest_CPfile)
+TGFpos = (latest_KCConfile)
+CGFpos = (latest_CGFfile, latest_NATfile, latest_PATfile, latest_RSDfile, latest_STLfile, latest_WMEMfile)
+PNWpos = (latest_PNWfile)
+NORpos = (latest_NORfile)
+KCEpos = (latest_KCEfile, latest_CGFDDGfile)
+GJpos = (latest_GJfile)
+
+# --------------------------
+
+# Position email Center Gulf
+
+# Sets up email 
+import win32com.client as win32
+
+outlook = win32.Dispatch('outlook.application')
+mail = outlook.CreateItem(0)
+mail.To = "Aidan.Dore@ldc.com;ALEXANDER.BOS@ldc.com;ANDREW.BALLENTINE@ldc.com;Andrew.North@ldc.com;BRIAN.GRIMM@ldc.com;CARRIE.BROWN@ldc.com;Charles.Grunhard@ldc.com;Christian.Duke@ldc.com;Ciara.Kelley@ldc.com;ERIN.MAXWELL@ldc.com;GEORGE.GOREY@ldc.com;GORDON.RUSSELL@ldc.com;HARVEY.YAGUCHI@ldc.com;JAY.NELSON@ldc.com;JAY.WHITE@ldc.com;Karl.Larson@ldc.com;KIM.HAWKS@ldc.com;Kris.Tillie@ldc.com;KSC-POS-Control@ldc.com;Lana.Aguzzi@ldc.com;Lisa.Rhodes@ldc.com;LUCIA.BERTOLOTTI@ldc.com;Matthew.Phillips@ldc.com;Matthew.Searcy@ldc.com;MITCHELL.HANSEN@ldc.com;Parker.Phillips@ldc.com;Patrick.Molloy@ldc.com;RENEE.ERVIN@ldc.com;Rick.Shannon@ldc.com;Ron.Respess@ldc.com;Ryan.Kelleher@ldc.com;ryan.osleeb@ldc.com;Samuel.Hardwick@ldc.com;SEBASTIAN.MASIAKOWSKI@ldc.com;TOM.SEXTER@ldc.com"
+mail.CC = ""
+mail.Subject = 'Center Gulf Positions'
+mail.Body = 'Please see attached files'
+
+# Attach file to the email
+attachments1  = (latest_CGFfile,latest_NATfile,latest_PATfile,latest_RSDfile,latest_STLfile,latest_WMEMfile)
+
+# attachments is your list if strings
+for attachment in attachments1:
+    mail.Attachments.Add(attachment)
+
+mail.Send()
+
+# --------------------------
+
+# Position email KC Ethanol
+outlook = win32.Dispatch('outlook.application')
+mail = outlook.CreateItem(0)
+mail.To = "Andrew.North@ldc.com;Charles.Grunhard@ldc.com;GORDON.RUSSELL@ldc.com;JAY.NELSON@ldc.com;KSC-6th-Floor-Finance@ldc.com;LUCIA.BERTOLOTTI@ldc.com;MITCHELL.HANSEN@ldc.com;NATHAN.BRABEC@ldc.com;Rita.Nagle@ldc.com;ryan.osleeb@ldc.com"
+mail.CC = ""
+mail.Subject = KCEfilename
+mail.Body = 'Please see attached files'
+
+# Attach file to the email
+attachments2  = (latest_KCEfile, latest_DDGfile)
+
+# attachments is your list if strings
+for attachment in attachments2:
+    mail.Attachments.Add(attachment)
+
+mail.Send()
+
+# --------------------------
+
+# Position email Claypool
+outlook = win32.Dispatch('outlook.application')
+mail = outlook.CreateItem(0)
+mail.To = "Aidan.Dore@ldc.com;ANDREW.BALLENTINE@ldc.com;Andrew.North@ldc.com;ANNMARIE.HARRIS@ldc.com;BRANDON.HALL@ldc.com;BRIAN.GRIMM@ldc.com;Brynna.DeMotte@ldc.com;ERIN.MAXWELL@ldc.com;GABRIELA.MELLEN@ldc.com;GORDON.RUSSELL@ldc.com;JEREMY.MULLINS@ldc.com;JOHN.MEYER@ldc.com;KAREN.BURGAN@ldc.com;KEVIN.EPPARD@ldc.com;KSC-POS-Control@ldc.com;LANIS.HEUISER@ldc.com;LEN.FEDERICO@ldc.com;LUCIA.BERTOLOTTI@ldc.com;NIKI.MILLER@ldc.com;Patrick.Molloy@ldc.com;Ryan.C.Martin@ldc.com"
+mail.CC = ""
+mail.Subject = CPfilename
+mail.Body = 'Please see attached file'
+
+# Attach file to the email
+attachments3  = (latest_CPfile)
+
+# attachments is your list if strings
+mail.Attachments.Add(attachments3)
+
+mail.Send()
+
+# --------------------------
+
+# Position email PNW
+outlook = win32.Dispatch('outlook.application')
+mail = outlook.CreateItem(0)
+mail.To = "Aidan.Dore@ldc.com;ANDREW.BALLENTINE@ldc.com;Andrew.North@ldc.com;ANDREW.SPAIN@ldc.com;BRIAN.GRIMM@ldc.com;Christian.Duke@ldc.com;ERIK.ANDERSON@ldc.com;ERIN.MAXWELL@ldc.com;GEORGE.CROLLA@ldc.com;GORDON.RUSSELL@ldc.com;HARVEY.YAGUCHI@ldc.com;KIM.HAWKS@ldc.com;KSC-POS-Control@ldc.com;LUCIA.BERTOLOTTI@ldc.com;Matthew.Phillips@ldc.com;Patrick.Molloy@ldc.com;ROBERT.LIGHTCAP@ldc.com;TOM.SEXTER@ldc.com"
+mail.CC = ""
+mail.Subject = PNWfilename
+mail.Body = 'Please see attached file'
+
+# Attach file to the email
+attachments4  = (latest_PNWfile)
+
+# attachments is your list if strings
+mail.Attachments.Add(attachments4)
+
+mail.Send()
+
+# --------------------------
+
+# Position email Norfolk
+outlook = win32.Dispatch('outlook.application')
+mail = outlook.CreateItem(0)
+mail.To = "ANDREW.BALLENTINE@ldc.com;Andrew.North@ldc.com;BLAKE.GUTZ@ldc.com;Charles.Grunhard@ldc.com;Evan.Parks@ldc.com;KSC-POS-Control@ldc.com;LUCIA.BERTOLOTTI@ldc.com;MITCHELL.HANSEN@ldc.com;NATHAN.BRABEC@ldc.com;len.federico@ldc.com;Rita.Nagle@ldc.com;ryan.osleeb@ldc.com;Timothy.Krause@ldc.com"
+mail.CC = ""
+mail.Subject = NORfilename
+mail.Body = 'Please see attached file'
+
+# Attach file to the email
+attachments5  = (latest_NORfile)
+
+# attachments is your list if strings
+mail.Attachments.Add(attachments5)
+
+mail.Send()
+
+# --------------------------
+
+# Position email Grand Junction
+outlook = win32.Dispatch('outlook.application')
+mail = outlook.CreateItem(0)
+mail.To = "Aidan.Dore@ldc.com;ANDREW.BALLENTINE@ldc.com;Andrew.North@ldc.com;ANDREW.SPAIN@ldc.com;BRIAN.GRIMM@ldc.com;Christian.Duke@ldc.com;ERIK.ANDERSON@ldc.com;ERIN.MAXWELL@ldc.com;GEORGE.CROLLA@ldc.com;len.federico@ldc.com;GORDON.RUSSELL@ldc.com;HARVEY.YAGUCHI@ldc.com;KIM.HAWKS@ldc.com;LUCIA.BERTOLOTTI@ldc.com;Matthew.Phillips@ldc.com;Patrick.Molloy@ldc.com;ROBERT.LIGHTCAP@ldc.com;TOM.SEXTER@ldc.com;KSC-6th-Floor-Finance@ldc.com;len.federico@ldc.com;michele.brown@ldc.com;tyler.hatesohl@ldc.com"
+mail.CC = ""
+mail.Subject = GJfilename
+mail.Body = 'Please see attached file'
+
+# Attach file to the email
+attachments6  = (latest_GJfile)
+
+# attachments is your list if strings
+mail.Attachments.Add(attachments6)
+
+mail.Send()
+
+# --------------------------
+
+# Position email TGF
+outlook = win32.Dispatch('outlook.application')
+mail = outlook.CreateItem(0)
+mail.To = "ALEXANDER.BOS@ldc.com;BILL.ARNOLD@ldc.com;DAVID.WEIDMAIER@ldc.com;GEORGE.CROLLA@ldc.com;GEORGE.GOREY@ldc.com;JORGE.SANTIZO@ldc.com;KSC-POS-Control@ldc.com;ROBERT.LIGHTCAP@ldc.com;Ryan.Kelleher@ldc.com;SEBASTIAN.MASIAKOWSKI@ldc.com"
+mail.CC = ""
+mail.Subject = KCConfilename
+mail.Body = 'Please see attached file'
+
+# Attach file to the email
+attachments7  = (latest_KCConfile)
+
+# attachments is your list if strings
+mail.Attachments.Add(attachments7)
+
+mail.Send()
+
+# --------------------------
+
+# Position email US Consolidated
+outlook = win32.Dispatch('outlook.application')
+mail = outlook.CreateItem(0)
+mail.To = "Benjamin.Williams@ldc.com; ANDREW.BALLENTINE@ldc.com; GEORGE.GOREY@ldc.com; HARVEY.YAGUCHI@ldc.com; KIM.HAWKS@ldc.com; KSC-POS-Control@ldc.com; Shawna.Brueske@ldc.com; TAKERU.SAITOH@ldc.com; Rita.Nagle@ldc.com; Andrew.North@ldc.com; TOM.SEXTER@ldc.com; ANDREW.SPAIN@ldc.com; Matthew.Phillips@ldc.com; Christian.Duke@ldc.com; DAVID.WEIDMAIER@ldc.com; LUCIA.BERTOLOTTI@ldc.com; GORDON.RUSSELL@ldc.com"
+mail.CC = ""
+mail.Subject = USConfilename
+mail.Body = 'Please see attached file'
+
+# Attach file to the email
+attachments8  = (latest_USConfile)
+
+# attachments is your list if strings
+mail.Attachments.Add(attachments8)
+
+mail.Send()
