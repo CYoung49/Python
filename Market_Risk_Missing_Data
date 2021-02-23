@@ -1,0 +1,54 @@
+import pandas as pd
+import numpy as np
+import re
+from glob import glob
+import datetime
+from tabulate import tabulate
+
+now = datetime.datetime.now()
+todayDate = str(now.month)+"/"+str(now.day)+"/"+str(now.year)
+
+ListSave = (r"C:\\Users\\youngc\\Desktop\\New folder\\New folder\\List_Save.xlsx")
+
+mkt_zones = ['CGF','CLP','ETH','GRJ','NRF','PNW','TGF','YRK']
+
+dfList = pd.DataFrame(columns=['Date', 'Office'])
+
+for f in glob("F:/ACCOUNTING/DAILY P&L/Market Risk Prices/mktRiskPrices*.xlsm"):
+# for f in glob(r"C:/Users/youngc/Desktop/New folder/New folder/mktRiskPrices*.xlsm"):
+    df = pd.read_excel(f)
+    findDate = re.search("([0-9]{4}[0-9]{2}[0-9]{2})",f)
+    findDate = findDate.group()
+    df2 = (df["OFFICE"].unique())
+    missing_data = list(set(mkt_zones).difference(df2))
+    for m in missing_data:
+        s = pd.Series(index=['Date', 'Office'], name = 's')
+        s['Date'] = int(findDate)
+        s['Office'] = m
+        dfList = dfList.append(s).reset_index(drop=True)
+
+dfList = dfList.astype(dtype={'Date':np.int,'Office':np.object_}) 
+dfList['Date'] = pd.to_datetime(dfList['Date'], format='%Y%m%d').dt.strftime("%m/%d/%Y"); dfList
+
+dfList = dfList.loc[dfList['Date'] < todayDate]
+
+dfList['Date'] = pd.to_datetime(dfList['Date'])
+dfList = dfList[dfList['Date'] < todayDate]
+dfList['Date'] = pd.to_datetime(dfList['Date'], format='%Y%m%d').dt.strftime("%m/%d/%Y"); dfList
+
+dfList = dfList.sort_values('Date')
+
+# print(dfList)
+print(tabulate(dfList, showindex=False, headers=dfList.columns))
+
+# Sets up email
+import win32com.client as win32
+outlook = win32.Dispatch('outlook.application')
+mail = outlook.CreateItem(0)
+mail.To = 
+mail.CC = 
+mail.Subject = todayDate + ' Market Risk Prices - Missing data'
+mail.Body = '''I am missing market risk prices for the following dates. Please update as soon as you can.\n
+               {}'''.format(tabulate(dfList, showindex=False, headers=dfList.columns))
+mail.Display(True)
+print("Ready to go")
