@@ -1,0 +1,39 @@
+import watchdog.events 
+import watchdog.observers 
+import time 
+import subprocess
+
+program = (r"//kc-grain-vol/KC-GRAIN-VOL/ACCOUNTING/POSITION/Daily/MiddleOffice/Scripts/Prod_FutAct_Auto.py")
+src_path = (r"\\ebsmeypisf01\PRD_AppShare\CINCH\PRD")
+  
+class Handler(watchdog.events.PatternMatchingEventHandler): 
+    def __init__(self): 
+        # Set the patterns for PatternMatchingEventHandler 
+        watchdog.events.PatternMatchingEventHandler.__init__(self, patterns=['*Prelim*.csv'], 
+                                                             ignore_directories=True, case_sensitive=False) 
+  
+    def on_created(self, event): 
+        # Event is created, you can process it now 
+        subprocess.Popen(['C:\\ProgramData\\Anaconda3\\python.exe',program])
+        print("Created:", event.src_path)
+
+if __name__ == "__main__": 
+    event_handler = Handler() 
+    observer = watchdog.observers.Observer() 
+    observer.schedule(event_handler, path=src_path, recursive=True) 
+    observer.start() 
+    try: 
+        while True: 
+            time.sleep(1) 
+    except KeyboardInterrupt: 
+        observer.stop()
+        # Creates an email
+        import win32com.client as win32
+        outlook = win32.Dispatch('outlook.application')
+        mail = outlook.CreateItem(0)
+        mail.To = 
+        mail.Subject = 'FutAct Watcher stopped running'
+        mail.Body = 'FutAct Watcher stopped running. Please restart.'
+
+        mail.Send()
+    observer.join() 
